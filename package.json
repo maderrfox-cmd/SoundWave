@@ -1,0 +1,23 @@
+{
+  "name": "soundwave",
+  "productName": "SoundWave",
+  "version": "1.0.0",
+  "description": "SoundWave : lecteur de musique YouTube et Spotify, clip en fond, paroles synchronisées",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "test": "node test.js",
+    "dist:mac": "electron-builder --mac",
+    "dist:win": "electron-builder --win"
+  },
+  "devDependencies": {
+    "electron": "^39.0.0",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "app.soundwave",
+    "files": ["main.js", "preload.js", "spotify.js", "discord.js", "eq.html", "player.html", "player-lib.js", "assets/**"],
+    "mac": { "category": "public.app-category.music", "target": "dmg", "icon": "assets/icon.png" },
+    "win": { "target": "nsis", "icon": "assets/icon.png" }
+  }
+}

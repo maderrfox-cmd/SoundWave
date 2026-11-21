@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<title>SoundWave égaliseur</title>
+<script src="player-lib.js"></script>
+<script>
+// Hidden window. Captures the player window's sound (Chromium then mutes the original),
+// runs it through bass shelf -> 10 bands -> treble shelf -> limiter, and plays the result.
+let eq = Lib.normalizeEq(null), nodes = null;
+
+window.bridge.onEq((s) => { eq = Lib.normalizeEq(s); apply(); });
+
+async function start() {
+  try {
+    const stream = await navigator.mediaDevices.getDisplayMedia({
+      video: true, // required by the API; stopped right away
+      audio: { suppressLocalAudioPlayback: true, echoCancellation: false, noiseSuppression: false, autoGainControl: false, channelCount: 2 },
+    });
+    stream.getVideoTracks().forEach((t) => t.stop());
+    if (!stream.getAudioTracks().length) throw new Error('pas de piste audio');
+    const ctx = new AudioContext({ latencyHint: 'interactive' });
+    await ctx.resume();
+    const src = ctx.createMediaStreamSource(stream);
+    const pre = ctx.createGain();
+    const shelf = (type, f) => { const n = ctx.createBiquadFilter(); n.type = type; n.frequency.value = f; return n; };
+    const bass = shelf('lowshelf', 90), treble = shelf('highshelf', 9000);
+    const bands = Lib.EQ_FREQS.map((f) => { const n = shelf('peaking', f); n.Q.value = 1.1; return n; });
+    const limiter = ctx.createDynamicsCompressor();
+    limiter.threshold.value = -1.5; limiter.knee.value = 0; limiter.ratio.value = 20; limiter.attack.value = 0.002; limiter.release.value = 0.2;
+    [src, pre, bass, ...bands, treble, limiter, ctx.destination].reduce((a, b) => (a.connect(b), b));
+    nodes = { ctx, pre, bass, treble, bands, stream };
+    stream.getAudioTracks()[0].onended = () => window.bridge.eqStatus({ ok: false, msg: 'La capture du son s\'est arrêtée.' });
+    apply();
+    window.bridge.eqStatus({ ok: true });
+  } catch (e) {
+    window.bridge.eqStatus({ ok: false, msg: e.message || String(e) });
+  }
+}
+
+function apply() {
+  if (!nodes) return;
+  const t = nodes.ctx.currentTime, set = (p, v) => p.setTargetAtTime(v, t, 0.04); // smooth, no clicks
+  set(nodes.pre.gain, Math.pow(10, Lib.eqHeadroom(eq) / 20));
+  set(nodes.bass.gain, eq.bass);
+  set(nodes.treble.gain, eq.treble);
+  nodes.bands.forEach((n, i) => set(n.gain, eq.bands[i]));
+}
+</script>
