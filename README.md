@@ -1,5 +1,3 @@
-<p align="center"><img src="assets/logo.png" width="140" alt="SoundWave logo"></p>
-
 <h1 align="center">SoundWave</h1>
 <p align="center"><b>Your music, your vibe.</b> A desktop music player with the music video playing behind your songs, synced lyrics and 20 themes.</p>
 
